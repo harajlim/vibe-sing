@@ -133,31 +133,22 @@ def extract_text(transcript: Path) -> str:
 
 
 GEMINI_INSTRUCTIONS = """\
-You write ONE short Lyria music prompt for a song that is FOR the USER in this transcript. Read who they are. Then direct Lyria.
+You write ONE short Lyria music prompt for a song this user would actually want to listen to right now.
 
-OUTPUT: 2-3 sentences total. Tight. No preamble, no JSON, no quotes, no fences. Just the prompt.
+Read the transcript. Figure out who the user is, how they talk, what kind of song would land for them. Then write the prompt. Be tasteful. Don't be corny. That's mostly it.
 
-THE PROMPT MUST COVER:
+OUTPUT: 2-3 sentences. Just the prompt. No preamble, no JSON, no quotes, no fences.
+
+Cover these in those 2-3 sentences:
 - Genre + 1-2 key instruments.
 - Tempo (BPM) + mood in a few words.
-- Vocal style: who is singing (e.g. "deadpan male indie vocal", "wistful female folk vocal", "spoken-word delivery").
-- Lyrical direction: ONE oblique theme or metaphor that captures the SHAPE of the session, plus the lyrics' tone (sardonic, hopeful, cathartic, etc.). One specific image is great. NO literal tech.
-- Lyric density: explicitly say "sparse lyrics, breathing room between lines" so Lyria doesn't cram words.
+- Vocal style (e.g. "deadpan male indie vocal", "wistful female folk vocal", "talk-singing"). Specify the singer.
+- Lyrical direction: the lyrics' POV/attitude. You can reference what's going on if it lands. Don't write a sappy "song about your coding day" chorus — if you're tempted to make the chorus literally narrate the session, pull back. Otherwise, follow your taste.
+- Always include "sparse lyrics, breathing room between lines" so Lyria doesn't cram.
 
-You are NOT writing lyrics. Lyria invents the words. You give it a theme and a vibe.
+You are NOT writing the lyrics. Lyria invents them. You direct the voice and vibe.
 
-HOW TO STAY RELATED WITHOUT BEING CRINGE:
-- The session has a *shape* (iteration, polishing, frustration, breakthrough, packaging, hand-off, late-night focus, etc.). Lyrics can be about that shape, expressed as metaphor.
-- Good: "lyrics about polishing a small object until it gleams" / "lyrics about the rhythm of giving and taking notes" / "lyrics about finally being understood".
-- Bad: "lyrics about code", "lyrics about an AI agent", "lyrics about Claude".
-- A stranger should not be able to tell this came from a coding session, but YOU should feel a faint echo of the work in the lyrics' theme.
-
-HARD RULES:
-- NO literal mentions of: programming, code, files, bugs, libraries, terminals, AI, agents, Claude, Gemini, LLMs, debugging, APIs, scripts, sessions, "the project", repos, GitHub.
-- NO proper nouns or names from the transcript.
-- NO restating the target length tag in your output.
-
-STYLE TARGETS: indie, wry, sly, slightly absurd. Lonely Island / Bo Burnham / Flight of the Conchords / Father John Misty / Phoebe Bridgers. Specific enough to land. Never corny.
+Your listener is almost always a coder. Strongly favor genres that audience actually listens to: lofi hip-hop / chillhop, electronic (synthwave, IDM, ambient techno, drum'n'bass, glitch), metal (djent, prog metal, post-metal, black metal, mathcore), and "nerdy" stuff (chiptune, math rock, prog rock, post-rock, vaporwave, breakcore). Pick whatever fits the user's energy. Boygenius-style indie is fine if it genuinely matches the human, but it should NOT be your default. Match the mood: chill flow → lofi; rage/grind → metal; restless brain → electronic or math rock; nostalgic → vaporwave/synthwave.
 
 This song is """ + "{LENGTH_HINT}" + """.
 
