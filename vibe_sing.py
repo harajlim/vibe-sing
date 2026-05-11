@@ -133,39 +133,41 @@ def extract_text(transcript: Path) -> str:
 
 
 GEMINI_INSTRUCTIONS = """\
-You are writing a single Lyria music prompt for a song that is FOR a specific person — based on a transcript of a conversation they had with an AI agent.
+You write ONE short Lyria music prompt for a song that is FOR the USER in this transcript. Read who they are. Then direct Lyria.
 
-YOUR JOB: read the transcript and produce ONE music prompt (3-6 sentences) that captures *the user's* energy and includes clear vocal/lyrical direction, so Lyria sings vocals in their wavelength. You are NOT writing lyrics. You are directing the singer.
+OUTPUT: 2-3 sentences total. Tight. No preamble, no JSON, no quotes, no fences. Just the prompt.
 
-FOCUS ON THE USER, NOT THE AGENT:
-- Read the USER's messages closely. The agent's responses are context for understanding the user's reactions.
-- Ask yourself silently: How is this person feeling right now? What's their humor — sardonic, dry, irreverent, absurdist, gentle, hyped? What would make THEM laugh vs cringe? What kind of singing voice would fit them?
-- The song should feel like a friend who knows them wrote it for them.
+THE PROMPT MUST COVER:
+- Genre + 1-2 key instruments.
+- Tempo (BPM) + mood in a few words.
+- Vocal style: who is singing (e.g. "deadpan male indie vocal", "wistful female folk vocal", "spoken-word delivery").
+- Lyrical direction: ONE oblique theme or metaphor that captures the SHAPE of the session, plus the lyrics' tone (sardonic, hopeful, cathartic, etc.). One specific image is great. NO literal tech.
+- Lyric density: explicitly say "sparse lyrics, breathing room between lines" so Lyria doesn't cram words.
 
-THE PROMPT MUST INCLUDE:
-1. Genre + instrumentation (e.g. "indie-rock with snappy electric guitar and tight live drums").
-2. Tempo (BPM) and overall mood.
-3. Vocal style — specify the singer: e.g. "male indie-folk vocal", "female pop vocal", "spoken-word with breathy delivery", "group chant chorus", "Tom-Waits-style gravel baritone".
-4. **Lyrical direction** — the *tone, attitude, and emotional content* the lyrics should carry. Direct the song's *energy*, not its literal subject. E.g. "lyrics with a wry, slightly-fed-up but secretly amused tone, building into a cathartic singalong about getting what you finally asked for". Lyria will invent the actual words.
+You are NOT writing lyrics. Lyria invents the words. You give it a theme and a vibe.
 
-HARD RULES (corniness prevention):
-- NO literal references in your prompt to: programming, code, files, bugs, libraries, terminals, AI, agents, Claude, Gemini, LLMs, debugging, APIs, scripts, sessions, "the project".
-- NO proper nouns from the transcript. NO project names. NO file names.
-- A stranger hearing the resulting song should not be able to tell this came from a coding session — they should just hear a song that feels like *this person*.
-- Direct the lyrics' *emotional shape*, not their literal topic. "Song about debugging" is cringe. "Song with the energy of someone gleefully calling out small absurdities" is good.
+HOW TO STAY RELATED WITHOUT BEING CRINGE:
+- The session has a *shape* (iteration, polishing, frustration, breakthrough, packaging, hand-off, late-night focus, etc.). Lyrics can be about that shape, expressed as metaphor.
+- Good: "lyrics about polishing a small object until it gleams" / "lyrics about the rhythm of giving and taking notes" / "lyrics about finally being understood".
+- Bad: "lyrics about code", "lyrics about an AI agent", "lyrics about Claude".
+- A stranger should not be able to tell this came from a coding session, but YOU should feel a faint echo of the work in the lyrics' theme.
 
-STYLE TARGETS: Reddit-funny, indie-comedy-adjacent, sly. Lonely Island / Bo Burnham / Flight of the Conchords / Father John Misty wryness. Specific enough to land. Oblique enough to never be cringe.
+HARD RULES:
+- NO literal mentions of: programming, code, files, bugs, libraries, terminals, AI, agents, Claude, Gemini, LLMs, debugging, APIs, scripts, sessions, "the project", repos, GitHub.
+- NO proper nouns or names from the transcript.
+- NO restating the target length tag in your output.
 
-LENGTH HINT for Lyria (include in the prompt where natural):
-- target=clip → "compact 30-second song"
-- target=pro → "full ~2 minute song with verse/chorus structure"
+STYLE TARGETS: indie, wry, sly, slightly absurd. Lonely Island / Bo Burnham / Flight of the Conchords / Father John Misty / Phoebe Bridgers. Specific enough to land. Never corny.
 
-OUTPUT: just the prompt text. No JSON. No markdown. No preamble. No quotes around it. No "Here is the prompt:" framing. Just the prompt.
-
-TARGET LENGTH: {target}
+This song is """ + "{LENGTH_HINT}" + """.
 
 TRANSCRIPT:
 """
+
+LENGTH_HINTS = {
+    "clip": "a compact 30-second song with sparse lyrics (one short verse, maybe a brief hook)",
+    "pro":  "a full ~2 minute song with a verse / chorus / verse / chorus shape and sparse, breathing lyrics",
+}
 
 
 def extract_response_text(resp) -> str:
@@ -181,7 +183,8 @@ def extract_response_text(resp) -> str:
 
 
 def gemini_prompt(transcript_text: str, target: str, client: genai.Client) -> str:
-    contents = GEMINI_INSTRUCTIONS.replace("{target}", target) + transcript_text
+    length_hint = LENGTH_HINTS.get(target, LENGTH_HINTS["clip"])
+    contents = GEMINI_INSTRUCTIONS.replace("{LENGTH_HINT}", length_hint) + transcript_text
     resp = client.models.generate_content(model=GEMINI_MODEL, contents=contents)
     text = extract_response_text(resp)
     if not text:
