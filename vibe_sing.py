@@ -209,23 +209,57 @@ def lyria_generate(prompt: str, model: str, client: genai.Client) -> tuple[bytes
 
 
 def stop_playing() -> dict:
-    """Kill the currently playing afplay, if any. Returns a result dict."""
-    if not PID_FILE.exists():
-        return {"action": "stop", "status": "nothing playing"}
-    try:
-        pid = int(PID_FILE.read_text().strip())
-    except ValueError:
+    """
+    Kill any currently-playing vibe-sing song.
+
+    Two-pronged so we cover edge cases:
+      1. Precise kill via .playing.pid (the song our last invocation started).
+      2. Belt-and-suspenders pkill: any afplay process whose command line
+         references our generations dir. Catches orphans from older script
+         versions, race conditions during Lyria generation, and manually-
+         started playback. Scoped tightly enough not to nuke unrelated afplay.
+    """
+    killed_pids: list[int] = []
+
+    # 1. Precise: via pid file.
+    if PID_FILE.exists():
+        try:
+            pid = int(PID_FILE.read_text().strip())
+            try:
+                os.kill(pid, signal.SIGTERM)
+                killed_pids.append(pid)
+            except ProcessLookupError:
+                pass  # already finished
+            except PermissionError:
+                pass
+        except ValueError:
+            pass
         PID_FILE.unlink(missing_ok=True)
-        return {"action": "stop", "status": "stale pid file cleared"}
+
+    # 2. Fallback: pkill any afplay playing a file from our generations dir.
+    # The "vibe-sing/generations/vibe-" substring appears in both the symlink
+    # and resolved paths, so this works regardless of how the script was run.
+    pkill_killed = False
     try:
-        os.kill(pid, signal.SIGTERM)
-        result = {"action": "stop", "status": "stopped", "pid": pid}
-    except ProcessLookupError:
-        result = {"action": "stop", "status": "already finished", "pid": pid}
-    except PermissionError:
-        result = {"action": "stop", "status": "permission denied", "pid": pid}
-    PID_FILE.unlink(missing_ok=True)
-    return result
+        result = subprocess.run(
+            ["pkill", "-f", "afplay.*vibe-sing/generations/vibe-"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        # pkill returns 0 if it killed >=1 process, 1 if no matches.
+        pkill_killed = result.returncode == 0
+    except FileNotFoundError:
+        pass
+
+    if killed_pids or pkill_killed:
+        return {
+            "action": "stop",
+            "status": "stopped",
+            "pids": killed_pids,
+            "via_pkill": pkill_killed,
+        }
+    return {"action": "stop", "status": "nothing playing"}
 
 
 def main():
