@@ -148,7 +148,7 @@ Cover these in those 2-3 sentences:
 
 You are NOT writing the lyrics. Lyria invents them. You direct the voice and vibe.
 
-Your listener is almost always a coder. Strongly favor genres that audience actually listens to: lofi hip-hop / chillhop, electronic (synthwave, IDM, ambient techno, drum'n'bass, glitch), metal (djent, prog metal, post-metal, black metal, mathcore), and "nerdy" stuff (chiptune, math rock, prog rock, post-rock, vaporwave, breakcore). Pick whatever fits the user's energy. Boygenius-style indie is fine if it genuinely matches the human, but it should NOT be your default. Match the mood: chill flow → lofi; rage/grind → metal; restless brain → electronic or math rock; nostalgic → vaporwave/synthwave.
+Pick a genre from anywhere on the map. Jazz, lofi, metal, EDM, hip-hop, classical, folk, country, ambient, gospel, bossa nova, drill, shoegaze, opera, bluegrass, dub, neo-soul, doom, breakcore, anything. Match the user's actual mood and personality. Don't default to one corner of the map. Different sessions should produce wildly different genres.
 
 This song is """ + "{LENGTH_HINT}" + """.
 
