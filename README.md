@@ -2,67 +2,69 @@
 
 A Claude Code skill that ends your session with a song.
 
-Pipeline: **Claude Code session transcript → Gemini (mood translation) → Google Lyria 3 (music) → auto-play.**
+Reads the current session's transcript, asks Gemini to write a music prompt tuned to your specific vibe (not the agent's), then has Google Lyria compose and sing it. Plays straight to your speakers.
 
-- `/vibe-sing` — 30-second clip (default)
-- `/vibe-sing pro` — ~2-minute full song
-- `/vibe-sing stop` — kill the currently-playing song
+## Commands
 
-## Why it isn't corny
-
-Both the transcript filter and the Gemini system prompt explicitly forbid references to programming, files, libraries, bugs, or anything technical. The output is a *cinematic mood prompt* — genre, instrumentation, tempo, feel — not a song about your session. A listener should never guess what you were working on.
+```
+/vibe-sing        30-second clip (default)
+/vibe-sing pro    ~2-minute full song with vocals
+/vibe-sing stop   kill the currently-playing song
+```
 
 ## Install
 
-Clone directly into Claude Code's skills directory:
+Clone into Claude Code's skills directory:
 
 ```bash
 git clone https://github.com/harajlim/vibe-sing.git ~/.claude/skills/vibe-sing
 cd ~/.claude/skills/vibe-sing
 
-# Python deps
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 
-# API key — get one at https://aistudio.google.com/apikey
 cp .env.example .env
-$EDITOR .env  # paste your GOOGLE_API_KEY
+$EDITOR .env       # paste your GOOGLE_API_KEY
 ```
 
-Then in any Claude Code session, type `/vibe-sing`.
+Get a Google AI Studio key at https://aistudio.google.com/apikey.
 
-> **Hacking on the source?** Clone anywhere and symlink instead:
-> `ln -s "$(pwd)" ~/.claude/skills/vibe-sing` — edits go live immediately.
-
-## Configuration
-
-Env vars (set in `.env` or shell):
-
-- `GOOGLE_API_KEY` — required.
-- `VIBE_SING_GEMINI_MODEL` — defaults to `gemini-flash-latest` (auto-tracks newest Flash). Pin a version like `gemini-2.5-flash` if you want.
-
-Output mp3s land in `./generations/` (gitignored).
+Open any Claude Code session and type `/vibe-sing`.
 
 ## How it works
 
-1. Finds the JSONL transcript of the current session at `~/.claude/projects/<encoded-cwd>/<session>.jsonl` (picks the most recently modified — i.e. the live session).
-2. Extracts user prompts and assistant prose. Skips tool calls, tool results, thinking blocks, and system reminders. Up to ~100k tokens, tail-biased.
-3. Sends to Gemini with strict instructions: cinematic mood prompt only, no technical references, no specifics, no corniness.
-4. Sends Gemini's prompt to Lyria 3 (clip or pro).
-5. Saves the mp3 and `open`s it (macOS default audio player).
+1. The skill runs a Python pipeline as a Bash subprocess. Claude Code exposes `CLAUDE_CODE_SESSION_ID` to the subprocess, so the script locates *this* session's transcript JSONL deterministically (no "most recently modified" guessing, works fine with many parallel sessions).
+2. It pulls your messages plus the agent's prose out of the transcript. Tool calls, tool results, and thinking blocks are dropped. Up to roughly 100k tokens of recent context, tail-biased.
+3. That text goes to Gemini (`gemini-3-flash-preview` by default). The system prompt tells Gemini to read *you* (mood, humor, energy) and output a single Lyria prompt with vocal direction and lyrical tone. Gemini does not write the lyrics. Lyria does.
+4. Lyria composes the song. The mp3 lands in `generations/`, plays via `afplay` in a detached subprocess, and the script returns. Audio keeps playing after the skill call ends.
 
-## Files
+`/vibe-sing stop` reads the stashed PID and `SIGTERM`s the player, with a `pkill` fallback that targets any orphaned afplay running on a file from this skill's `generations/` dir.
 
-```
-vibe-sing/
-├── SKILL.md           # instructions Claude follows when /vibe-sing fires
-├── run.sh             # launcher (picks .venv/bin/python or system python3)
-├── vibe_sing.py       # pipeline
-├── requirements.txt   # google-genai, python-dotenv
-├── .env.example       # template for your GOOGLE_API_KEY
-└── generations/       # output mp3s (gitignored)
-```
+## Configuration
+
+| Env var                    | Default                  | Notes                                          |
+| -------------------------- | ------------------------ | ---------------------------------------------- |
+| `GOOGLE_API_KEY`           | (required)               | From Google AI Studio.                         |
+| `VIBE_SING_GEMINI_MODEL`   | `gemini-3-flash-preview` | Override to pin or upgrade.                    |
+
+Output mp3s live in `generations/` (gitignored).
 
 ## Platform
 
-macOS (uses `open` to auto-play). Linux users: swap `open` for `xdg-open` in `vibe_sing.py`.
+macOS. Auto-play uses `afplay`, which is built in. On Linux, swap `afplay` for `mpg123` or `paplay` in `vibe_sing.py`.
+
+## Layout
+
+```
+vibe-sing/
+├── SKILL.md          # what Claude reads when /vibe-sing fires
+├── run.sh            # picks .venv/bin/python or system python3, execs the pipeline
+├── vibe_sing.py      # the pipeline
+├── requirements.txt  # google-genai, python-dotenv
+├── .env.example      # GOOGLE_API_KEY template
+└── generations/      # output mp3s (gitignored)
+```
+
+## License
+
+MIT.
