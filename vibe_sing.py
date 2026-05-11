@@ -14,6 +14,7 @@ Usage:
 import json
 import os
 import re
+import signal
 import subprocess
 import sys
 from datetime import datetime
@@ -26,6 +27,7 @@ from google import genai
 SKILL_DIR = Path(__file__).parent
 GENERATIONS_DIR = SKILL_DIR / "generations"
 GENERATIONS_DIR.mkdir(exist_ok=True)
+PID_FILE = SKILL_DIR / ".playing.pid"
 
 env_file = SKILL_DIR / ".env"
 if env_file.exists():
@@ -206,14 +208,39 @@ def lyria_generate(prompt: str, model: str, client: genai.Client) -> tuple[bytes
     sys.exit("Lyria returned no audio.")
 
 
+def stop_playing() -> dict:
+    """Kill the currently playing afplay, if any. Returns a result dict."""
+    if not PID_FILE.exists():
+        return {"action": "stop", "status": "nothing playing"}
+    try:
+        pid = int(PID_FILE.read_text().strip())
+    except ValueError:
+        PID_FILE.unlink(missing_ok=True)
+        return {"action": "stop", "status": "stale pid file cleared"}
+    try:
+        os.kill(pid, signal.SIGTERM)
+        result = {"action": "stop", "status": "stopped", "pid": pid}
+    except ProcessLookupError:
+        result = {"action": "stop", "status": "already finished", "pid": pid}
+    except PermissionError:
+        result = {"action": "stop", "status": "permission denied", "pid": pid}
+    PID_FILE.unlink(missing_ok=True)
+    return result
+
+
 def main():
+    arg = sys.argv[1].lower() if len(sys.argv) > 1 else ""
+
+    if arg == "stop":
+        print(json.dumps(stop_playing()))
+        return
+
     if not API_KEY:
         sys.exit(
             "GOOGLE_API_KEY not set. Add it to ~/.claude/skills/vibe-sing/.env "
             "or have it available in the environment."
         )
 
-    arg = sys.argv[1].lower() if len(sys.argv) > 1 else ""
     is_pro = arg == "pro"
     lyria_model = "lyria-3-pro-preview" if is_pro else "lyria-3-clip-preview"
     target = "pro" if is_pro else "clip"
@@ -241,16 +268,23 @@ def main():
     out.write_bytes(audio_bytes)
     print(f"[saved] {out}", file=sys.stderr)
 
+    # If a prior song is still playing, stop it before starting a new one.
+    stop_playing()
+
     # Play inline via afplay (macOS built-in). Detached so the script returns
-    # immediately and audio continues in the background.
+    # immediately and audio continues in the background. PID gets stashed so
+    # `vibe_sing.py stop` can kill it later.
+    playing_pid = None
     try:
-        subprocess.Popen(
+        proc = subprocess.Popen(
             ["afplay", str(out)],
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
+        playing_pid = proc.pid
+        PID_FILE.write_text(str(playing_pid))
     except FileNotFoundError:
         subprocess.run(["open", str(out)], check=False)
 
@@ -259,6 +293,7 @@ def main():
         "audio_file": str(out),
         "model": lyria_model,
         "gemini_model": GEMINI_MODEL,
+        "playing_pid": playing_pid,
     }))
 
 

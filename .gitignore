@@ -1,6 +1,7 @@
 .env
 .venv
 generations/
+.playing.pid
 __pycache__/
 *.pyc
 .DS_Store

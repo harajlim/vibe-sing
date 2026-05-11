@@ -6,6 +6,7 @@ Pipeline: **Claude Code session transcript → Gemini (mood translation) → Goo
 
 - `/vibe-sing` — 30-second clip (default)
 - `/vibe-sing pro` — ~2-minute full song
+- `/vibe-sing stop` — kill the currently-playing song
 
 ## Why it isn't corny
 
