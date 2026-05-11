@@ -4,7 +4,7 @@ A Claude Code skill that ends your session with a song.
 
 Reads the current session's transcript, asks Gemini to write a music prompt tuned to your specific vibe (not the agent's), then has Google Lyria compose and sing it. Plays straight to your speakers.
 
-🔊 **Listen to a sample** generated while finishing this very skill: [examples/we-cooked.mp3](https://github.com/harajlim/vibe-sing/raw/master/examples/we-cooked.mp3) (30s thrash, shouted: *"HOLY SHIT WE COOKED TONIGHT / LET'S HOPE THEY ACCEPT OUR PR"*).
+🎬 **Sample** generated while finishing this skill: [we-cooked.mp4](https://github.com/harajlim/vibe-sing/raw/master/examples/we-cooked.mp4) (30s thrash, shouted: *"HOLY SHIT WE COOKED TONIGHT / LET'S HOPE THEY ACCEPT OUR PR"*). Raw audio: [we-cooked.mp3](https://github.com/harajlim/vibe-sing/raw/master/examples/we-cooked.mp3).
 
 ## Commands
 
